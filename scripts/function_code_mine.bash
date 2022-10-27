@@ -19,8 +19,8 @@ export max_source_length=256
 export spot_noise=0
 export asoc_noise=0
 export map_config=config/offset_map/closest_offset_en.yaml
-export tpu_cores=1
-export xla_spawn_script=script/xla_spawn.py
+export tpu_cores=8
+export xla_spawn_script=scripts/xla_spawn.py
 
 OPTS=$(getopt -o b:d:m:i:t:k:s:l:f:n:v --long batch:,device:,model:,data:,task:,run-time:,seed:,lr:,lr_scheduler:,label_smoothing:,epoch:,format:,eval_steps:,warmup_ratio:,constraint_decoding,verbose,preprocess,fp16:,negative:,random_prompt,max_source_length:,max_target_length:,spot_noise:,asoc_noise:,positive:,map_config:, -n 'parse-options' -- "$@")
 
@@ -175,18 +175,6 @@ while true; do
   esac
 done
 
-
-get_gpu_num() {
-  IFS=,
-  num=0
-  for i in ${CUDA_VISIBLE_DEVICES}
-  do
-    num=$((${num} + 1))
-  done
-  echo ${num}
-  return ${num}
-}
-
 function rand(){
     min=$1
     max=$(($2-$min+1))
@@ -194,7 +182,7 @@ function rand(){
     echo $(($num%$max+$min))
 }
 
-gpu_num=$(get_gpu_num)
+# gpu_num=$(get_gpu_num)
 # 若使用多 GPU，则使用 distributed 版本的 PyTorch
 # For multiple GPU, use the Distributed version of PyTorch
 # if [[ ${gpu_num} == 1 ]]
@@ -221,7 +209,7 @@ fi
 # google/mt5-base -> google_mt5-base
 model_name_log=$(echo ${model_name} | sed -s "s/\//_/g")
 data_name_log=$(echo ${data_name} | sed -s "s/\//_/g")
-batch_log=$((gpu_num * batch_size))
+batch_log=$((tpu_cores * batch_size))
 
 EXP_ID=$(date +%F-%H-%M-$RANDOM)
 
