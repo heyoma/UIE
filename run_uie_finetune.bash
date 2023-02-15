@@ -72,7 +72,9 @@ for index in $(seq 1 ${run_time}); do
   fi
 
   echo "Map Config" ${map_config}
-  python3 scripts/sel2record.py -p ${output_dir} -g ${data_folder} -v -d ${decoding_format} -c ${map_config}
+  # python3 scripts/sel2record.py -p ${output_dir} -g ${data_folder} -v -d ${decoding_format} -c ${map_config}
+  # Added by Heyoma: use tokenizer to fix spans with '<unk>'
+  python3 scripts/sel2record.py -p ${output_dir} -g ${data_folder} -v -d ${decoding_format} -c ${map_config} -m ${output_dir}
   python3 scripts/eval_extraction.py -p ${output_dir} -g ${data_folder} -w -m ${eval_match_mode:-"normal"}
 
     # delete all optimizer.pt for saving disk
