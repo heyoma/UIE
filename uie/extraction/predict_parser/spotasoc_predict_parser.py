@@ -114,7 +114,7 @@ def get_tree_str(tree):
     return ' '.join(str_list)
 
 
-def rewrite_label_span(label, span, label_set=None, text=None):
+def rewrite_label_span(label, span, label_set=None, text=None, tokenizer=None):
 
     # Invalid Type
     if label_set and label not in label_set:
@@ -123,7 +123,10 @@ def rewrite_label_span(label, span, label_set=None, text=None):
 
     # Fix unk using Text
     if text is not None and '<unk>' in span:
-        span = fix_unk_from_text(span, text, '<unk>')
+        fixed_span = fix_unk_from_text(span, text, '<unk>', tokenizer=tokenizer)
+        # print(span, "-->", fixed_span)
+        span = fixed_span
+
 
     # Invalid Text Span
     if text is not None and span not in text:
@@ -135,7 +138,7 @@ def rewrite_label_span(label, span, label_set=None, text=None):
 
 class SpotAsocPredictParser(PredictParser):
 
-    def decode(self, gold_list, pred_list, text_list=None, raw_list=None
+    def decode(self, gold_list, pred_list, text_list=None, raw_list=None, tokenizer=None
                ) -> Tuple[List[Dict], Counter]:
         """
 
@@ -197,7 +200,8 @@ class SpotAsocPredictParser(PredictParser):
 
             instance['gold_spot'], instance['gold_asoc'], instance['gold_record'] = self.get_record_list(
                 sel_tree=instance["gold_tree"],
-                text=instance['text']
+                text=instance['text'],
+                tokenizer=tokenizer
             )
 
             try:
@@ -218,27 +222,27 @@ class SpotAsocPredictParser(PredictParser):
                     left_bracket + right_bracket,
                     brackets=brackets
                 )
-
             instance['pred_spot'], instance['pred_asoc'], instance['pred_record'] = self.get_record_list(
                 sel_tree=instance["pred_tree"],
-                text=instance['text']
+                text=instance['text'],
+                tokenizer=tokenizer
             )
 
             well_formed_list += [instance]
 
         return well_formed_list, counter
 
-    def get_record_list(self, sel_tree, text=None):
+    def get_record_list(self, sel_tree, text=None, tokenizer=None):
         """ Convert single sel expression to extraction records
         Args:
             sel_tree (Tree): sel tree
             text (str, optional): _description_. Defaults to None.
+            tokenizer (AutoTokenizer): Defaults to None.
         Returns:
             spot_list: list of (spot_type: str, spot_span: str)
             asoc_list: list of (spot_type: str, asoc_label: str, asoc_text: str)
             record_list: list of {'asocs': list(), 'type': spot_type, 'spot': spot_text}
         """
-
         spot_list = list()
         asoc_list = list()
         record_list = list()
@@ -248,18 +252,18 @@ class SpotAsocPredictParser(PredictParser):
             # Drop incomplete tree
             if isinstance(spot_tree, str) or len(spot_tree) == 0:
                 continue
-
             spot_type = spot_tree.label()
             spot_text = get_tree_str(spot_tree)
+
             spot_type, spot_text = resplit_label_span(
                 spot_type, spot_text)
             spot_type, spot_text = rewrite_label_span(
                 label=spot_type,
                 span=spot_text,
                 label_set=self.spot_set,
-                text=text
+                text=text,
+                tokenizer=tokenizer
             )
-
             # Drop empty generated span
             if spot_text is None or spot_text == null_span:
                 continue
@@ -286,7 +290,8 @@ class SpotAsocPredictParser(PredictParser):
                     label=asoc_label,
                     span=asoc_text,
                     label_set=self.role_set,
-                    text=text
+                    text=text,
+                    tokenizer=tokenizer
                 )
 
                 # Drop empty generated span
