@@ -15,12 +15,16 @@ def fix_unk_from_text(span, text, unk='<unk>', tokenizer=None):
         fixed span
     """
     if tokenizer is not None:
-        return fix_unk_from_text_with_tokenizer(span,
-                                                text,
-                                                unk=unk,
-                                                tokenizer=tokenizer)
+        result = fix_unk_from_text_with_tokenizer(span,
+                                                  text,
+                                                  unk=unk,
+                                                  tokenizer=tokenizer)
+        # print(f"{span} => {result}")
+        return result
     else:
-        return fix_unk_from_text_without_tokenizer(span, text, unk=unk)
+        result = fix_unk_from_text_without_tokenizer(span, text, unk=unk)
+        # print(f"{span} => {result}")
+        return result
 
 
 def match_sublist(the_list, to_match: str, id2token):
@@ -39,12 +43,14 @@ def match_sublist(the_list, to_match: str, id2token):
     offset = 0
     tokens = []
     for i, tid in enumerate(the_list):
-        token = id2token[tid].replace("▁", "")
+        token = id2token[tid]
+        token = token.replace("▁", " ")
         tokens.append(token)
         decoded_text += token
         for c in token:
             decoded_offset_mapping.append(i)
         offset = offset + len(token)
+    # decoded_text = decoded_text.strip()
     index = decoded_text.find(to_match)
     if index == -1:
         return None
@@ -70,6 +76,7 @@ def fix_unk_from_text_with_tokenizer(span, text, unk='<unk>', tokenizer=None):
     fixed_span = text[true_offset[0]: true_offset[1]]
     match_reversed = r'\s*\S+\s*'.join([clean_wildcard(item.strip()) for item in span.split(unk)])
     fixed_span = re.search(match_reversed, fixed_span)
+
     if not fixed_span:
         return span
     return fixed_span.group().strip()
@@ -78,6 +85,7 @@ def fix_unk_from_text_with_tokenizer(span, text, unk='<unk>', tokenizer=None):
 def clean_wildcard(x):
     sp = ".*?()[]+"
     return re.sub("(" + "|".join([f"\\{s}" for s in sp]) + ")", "\\\\\g<1>", x)
+
 
 def fix_unk_from_text_without_tokenizer(span, text, unk='<unk>'):
     """
@@ -108,8 +116,6 @@ def fix_unk_from_text_without_tokenizer(span, text, unk='<unk>'):
     """
     if unk not in span:
         return span
-
-
 
     match = r'\s*\S+\s*'.join([clean_wildcard(item.strip()) for item in span.split(unk)])
     result = re.search(match, text)
